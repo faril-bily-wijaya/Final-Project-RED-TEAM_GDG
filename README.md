@@ -1,143 +1,161 @@
-# Penetration Testing Report: Exposure of Source Code & Active Debug Code in SIKOPJAK (CWE-538 / CWE-489)
+# Web Application & Infrastructure Security Assessment
 
-## Issue Description
-Kerentanan eksposur informasi kritikal berupa kebocoran repositori kode sumber (*Source Code Disclosure*) ditemukan pada infrastruktur Pemerintah Provinsi DKI Jakarta (`*.jakarta.go.id`). Melalui tahap *reconnaissance* yang sistematis menggunakan perangkat enumerasi otomatis seperti **Sublist3r, Amass, dan Subfinder**, berhasil diungkap keberadaan server GitLab internal di `git.jakarta.go.id` . Ini mengizinkan penemuan proyek secara anonim (*unauthenticated*) melalui *endpoint* API publiknya . 
+> **Laporan hasil security assessment** terhadap sistem informasi pada lingkungan pemerintahan `.go.id`.
+> Assessment dilakukan dengan prinsip **non-destructive security testing** dan berfokus pada identifikasi, validasi, dokumentasi, serta rekomendasi remediasi kerentanan kritis.
 
-Melalui celah ini, keseluruhan source code (*full code resource*) dari sistem SIMKoperasi terekspos ke publik. Repositori ini dipastikan merupakan kode sumber utama dari aplikasi produksi SIKOPJAK berdasarkan bukti berkas `README.md` (mengandung teks *"Stagging development-web-ppkukm"*) dan identitas *session cookie* `simkoperasi`.
+## Informasi Assessment
 
-Dari eksposur kode sumber ini, ditemukan bahwa pengembang menggunakan konfigurasi tidak aman `APP_DEBUG=true` pada `.env.example` di masa pengembangan. Untuk membuktikan apakah kelemahan konfigurasi dan logika ini terbawa hingga ke *server* produksi, analisis kode statis dilakukan dan menemukan *endpoint* `/sinkronisasi/berita/trx` yang tidak dilindungi autentikasi dan mengandung sisa fungsi *debug* `dd()` yang masih aktif (CWE-489). Saat *endpoint* ini dieksekusi di web server asli (*live*), sistem memicu halaman *debug* Laravel Ignition yang memvalidasi bahwa mode debug benar-benar aktif di produksi, sehingga mengekspos data internal yang sangat sensitif seperti kredensial *database*, kueri internal, dan *path server* (CWE-215). Serta dikuatkan oleh berkas `README.md` di dalam repositori yang secara eksplisit mencantumkan keterangan *"Stagging development-web-ppkukm"* dan kecocokan struktur kuki sesi aplikasi *simkoperasi*. Eksposur ini mengakibatkan kerangka arsitektur aplikasi, logika bisnis, rute server (*routes*), hingga konfigurasi templat lingkungan pada berkas `.env.example` jatuh ke tangan publik tanpa proteksi.
+| Item | Detail |
+|---|---|
+| Nama | Faril Bily Wijaya |
+| Division | Cyber Security – Red Team |
+| Jenis Assessment | Web Application & Infrastructure Security Assessment |
+| Metodologi | Reconnaissance → Vulnerability Analysis → Safe Exploitation/PoC → Reporting |
+| Target | `git.jakarta.go.id` & `disppkukm.jakarta.go.id` (SIKOPJAK) |
 
-## Affected URL/Area
-- **Initial API Endpoint:** `https://git.jakarta.go.id/api/v4/projects` 
-- **Target Repository:** `https://git.jakarta.go.id/miftah/SIMKoperasi` 
-- **Specific Branch/Tree:** `https://git.jakarta.go.id/miftah/SIMKoperasi/tree/sufi` 
-- **Exposed Assets:** Seluruh pohon direktori aplikasi (`app`, `config`, `routes`, `database`), berkas `.env.example`, dan `README.md` 
-- **Live Vulnerable Endpoint:** `https://disppkukm.jakarta.go.id/SIKOPJAK/sinkronisasi/berita/trx`
-.
+---
 
-## Risk Rating
-- **Risk:** **Medium**
-- **Difficulty to Exploit:** **Low** 
-- **Authentication Required:** **No** 
-- **User Interaction Required:** **No** 
-- **CVSS 4.0 Score:** [6.9 (Medium) - CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N] 
+# Executive Summary
 
-### Impact
-Penyerang eksternal anonim tanpa hak akses apa pun ke sistem dapat mengeksploitasi celah ini untuk mengunduh 100% *source code* aplikasi SIKOPJAK secara utuh . Tanpa memerlukan kredensial atau *privilege* server , pelaku kejahatan dapat melakukan analisis kode statis secara *offline* untuk memetakan celah keamanan tersembunyi  serta membaca pola konfigurasi sensitif yang tercantum pada templat `.env.example` . 
+Total terdapat **3 finding utama** yang terdeteksi dari eksploitasi berbasis intelijen (*Reconnaissance*) pada lingkungan target:
 
-Lebih jauh lagi, kepemilikan penuh atas source code ini berfungsi sebagai pengganda ancaman (*force multiplier*) melalui simulasi serangan *white-box*. Penyerang dapat memanfaatkan kode sumber yang bocor untuk mempelajari pengendali unggahan berkas secara mendalam guna merancang injeksi *web shell* (*Unauthenticated File Upload*), memetakan parameter sensitif untuk mengeksploitasi celah *Insecure Direct Object Reference* (IDOR) secara otomatis, hingga memilah rute mana saja yang luput dari proteksi *middleware* autentikasi tanpa harus melakukan pemindaian aktif di server produksi . Hal ini mengancam integritas data operasional Dinas PPKUKM DKI Jakarta dan kerahasiaan informasi ribuan entitas koperasi yang dikelola oleh sistem .
+## Ringkasan Finding
 
-### Attack Scenario
-**Tahap 1: Enumerasi dan Eksposur Repositori**
+| ID | Finding | Target | Severity | Status |
+|---|---|---|---|---|
+| F-01 | Public Repository Exposure (Source Code Disclosure) | `git.jakarta.go.id` | **HIGH (7.5)** | Confirmed |
+| F-02 | Active Debug Code Left in Production | `disppkukm.jakarta.go.id` | **MEDIUM (5.3)** | Confirmed |
+| F-03 | Sensitive Information Exposure Through Debug Interface | `disppkukm.jakarta.go.id` | **HIGH (7.5)** | Confirmed |
 
+---
+
+# F-01 — Public Repository Exposure (Source Code Disclosure)
+
+- **Title:** Public Repository Exposure Leading to Full Source Code Disclosure
+- **CWE:** CWE-538: File and Directory Information Exposure
+- **CVSS 3.1 Score:** 7.5 (High)
+
+## Description
+Kerentanan eksposur informasi kritikal berupa kebocoran repositori kode sumber (*Source Code Disclosure*) ditemukan pada infrastruktur Pemerintah Provinsi DKI Jakarta (`*.jakarta.go.id`). Melalui tahap *reconnaissance* yang sistematis menggunakan perangkat enumerasi otomatis seperti **Sublist3r, Amass, dan Subfinder**, berhasil diungkap keberadaan server GitLab internal di `git.jakarta.go.id`. Kesalahan konfigurasi pada visibilitas proyek memungkinkan penemuan proyek SIKOPJAK secara anonim (*unauthenticated*) melalui *endpoint* API publiknya.
+
+## Impact
+Penyerang eksternal anonim tanpa hak akses apa pun ke sistem dapat mengeksploitasi celah ini untuk mengunduh 100% *source code* aplikasi SIKOPJAK secara utuh. Kepemilikan penuh atas source code ini berfungsi sebagai pengganda ancaman (*force multiplier*) melalui simulasi serangan *white-box*. Penyerang dapat mempelajari pengendali logika aplikasi, memetakan celah *Insecure Direct Object Reference* (IDOR), hingga memilah rute mana saja yang luput dari proteksi *middleware* autentikasi. Hal ini mengancam integritas data operasional Dinas PPKUKM DKI Jakarta secara masif.
+
+## POC (Proof of Concept)
+
+**Step 1:** Penyerang memulai *reconnaissance* pada lingkup target `*.jakarta.go.id` menggunakan perangkat pemindai otomatis yang kemudian berhasil memetakan keberadaan *subdomain* repositori.
 ![subfinder](reckon-subdomain.png)
 
-1. Penyerang memulai *reconnaissance* pada lingkup target `*.jakarta.go.id` menggunakan perangkat pemindai otomatis seperti **Sublist3r, Amass, dan Subfinder**, yang kemudian berhasil memetakan keberadaan *subdomain* repositori di `git.jakarta.go.id` .
-
-<br>
-
+**Step 2:** Antarmuka web GitLab mengharuskan *login*. Namun, penyerang memanfaatkan standar arsitektur GitLab dengan menembak *endpoint* API publik secara anonim: `curl -s "https://git.jakarta.go.id/api/v4/projects?per_page=20"`. Respons JSON dari API membocorkan Project ID 254 (`miftah/SIMKoperasi`).
 ![Git](git.jakarta.go.id.png)
 
-2. Saat diakses melalui browser, antarmuka web GitLab mengharuskan pengguna melakukan *login* . Namun, penyerang memanfaatkan standar arsitektur GitLab dengan menembak *endpoint* API publik bawaan secara anonim (`/api/v4/projects`) .
+**Step 3:** Penyerang mengakses tautan repositori secara langsung: `https://git.jakarta.go.id/miftah/SIMKoperasi/tree/sufi`.
+![Bukti Akses Publik GitLab](Gitlab-code-source.png)
+*Tangkapan layar di atas menunjukkan akses penuh tanpa batas. Keberadaan tombol "Sign in / Register" membuktikan akses unauthenticated.*
 
-<br>
-
+**Step 4:** Bukti bahwa repositori ini adalah kode sumber SIKOPJAK dikonfirmasi melalui teks `web-ppkukm` di dalam `README.md` serta kecocokan identitas kuki sesi `simkoperasi`.
 ![informasi web](Bukti-nama-WEB.png)
-
 ![Bukti session cookie](Bukti-session-cookie.png)
 
-3. Respons JSON dari API membocorkan Project ID 254 dengan nama `SIMKoperasi` . Penyerang mengakses repositori tersebut tanpa kendala . Bukti bahwa repositori ini adalah kode sumber SIKOPJAK dikonfirmasi melalui teks `web-ppkukm` di dalam `README.md`  serta kecocokan identitas kuki sesi.
+## CVSS Score Breakdown
+- **Attack Vector:** Network - Serangan dilakukan secara remote lewat internet.
+- **Attack Complexity:** Low - Tidak membutuhkan eksploitasi kompleks; cukup membaca API publik.
+- **Privileges Required:** None - Penyerang tidak perlu login.
+- **User Interaction:** None - Tidak membutuhkan interaksi dari admin/korban.
+- **Scope:** Unchanged - Celah terbatas pada aplikasi GitLab itu sendiri.
+- **Confidentiality:** High - Seluruh kode sumber, rute, dan logika bisnis bocor sepenuhnya.
+- **Integrity:** None - Penyerang tidak dapat mengubah data.
+- **Availability:** None - Tidak ada gangguan layanan.
 
-<br>
+## Recommended Fix
+1. **Ubah Visibilitas Repositori (Prioritas Utama):** Segera ubah setelan visibilitas proyek `miftah/SIMKoperasi` di server GitLab dari "Public" menjadi **"Private"**.
+2. **Kunci Akses API Anonim:** Konfigurasikan server GitLab agar menonaktifkan pencantuman daftar proyek publik (*Public Directory*).
 
-4. Penyerang mengunduh seluruh isi direktori server untuk mempelajari struktur kontroler, basis data, dan celah logika aplikasi secara mendalam secara *offline*. 
+---
 
-<br>
+# F-02 — Active Debug Code Left in Production
 
-**Tahap 2: Pembuktian Data Eksposur di Server Produksi**
+- **Title:** Active Debug Code (`dd()`) Accessible in Production Environment
+- **CWE:** CWE-489: Active Debug Code
+- **CVSS 3.1 Score:** 5.3 (Medium)
 
-6. Berdasarkan hasil tinjauan kode pada berkas `SinkronisasiController.php` baris 18, akses *endpoint* yang tidak terautentikasi di lingkungan produksi:
-   `https://disppkukm.jakarta.go.id/SIKOPJAK/sinkronisasi/berita/trx`
+## Description
+Dari hasil peninjauan (*code review*) pada source code yang bocor, ditemukan bahwa pengembang meninggalkan fungsi *debug* aktif di dalam *controller* aplikasi. Analisis statis terhadap berkas `SinkronisasiController.php` (baris 18) menunjukkan keberadaan *endpoint* `/sinkronisasi/berita/trx` yang memanggil fungsi *dump and die* (`dd()`). Endpoint ini diekspos di lingkungan produksi (*live*) tanpa perlindungan *middleware* autentikasi.
 
-<br>
+## Impact
+Tertinggalnya fungsi *debug* di produksi memberi indikator kuat bagi penyerang bahwa aplikasi tidak melalui proses pembersihan kode (sanitisasi) yang baik sebelum di-*deploy*. Pengeksekusian fungsi ini secara sengaja dapat digunakan oleh penyerang untuk menginterupsi alur program, memaksa server menampilkan *state* internal aplikasi pada saat itu, dan memicu *error* sistem yang dapat dieksploitasi ke tahap Information Disclosure yang lebih fatal.
 
-![Fungsi Debug](fungsi-debug.png)
+## POC (Proof of Concept)
 
-7. Amati *server* memicu halaman *debug* Laravel Ignition yang secara gamblang membocorkan informasi kredensial server internal.
+**Step 1:** Berdasarkan temuan kode sumber, penyerang memetakan keberadaan *endpoint* yang rentan: `https://disppkukm.jakarta.go.id/SIKOPJAK/sinkronisasi/berita/trx`.
 
-## Steps to Reproduce/PoC
-
-1. Jalankan proses pengumpulan informasi awal (*reconnaissance*) untuk memetakan domain GitLab instansi menggunakan alat enumerasi seperti Sublist3r atau Subfinder . 
-
-2. Kirimkan HTTP GET *request* anonim ke API GitLab untuk memintas halaman pelindung *login* :
-   `curl -s "https://git.jakarta.go.id/api/v4/projects?per_page=20"` 
-
-3. Ekstrak informasi dari respons JSON untuk menemukan *Project ID* 254 (`miftah/SIMKoperasi`) .
-
-4. Buka tautan repositori secara langsung pada peramban: 
-   `https://git.jakarta.go.id/miftah/SIMKoperasi/tree/sufi` 
-
-5. Amati bahwa antarmuka repositori dapat dijelajahi secara penuh meskipun tombol *Sign in / Register* masih tertera di pojok kanan atas, membuktikan tidak adanya autentikasi .
-
-6. Buka berkas `README.md` untuk memvalidasi teks identifikasi penamaan server target (*web-ppkukm*)  dan verifikasi kecocokan kuki sesi aplikasi `simkoperasi`.
-
-7. Buka berkas `.env.example` untuk melihat struktur variabel lingkungan yang terekspos .
-
-### Relevant Requests & Responses
-
-*** Request ***
-```http
-GET /api/v4/projects?per_page=20 HTTP/1.1
-Host: git.jakarta.go.id
-Accept: application/json
-```
-
-*** Response ***
-```http
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-[
-  {
-    "id": 254,
-    "name": "SIMKoperasi",
-    "path_with_namespace": "miftah/SIMKoperasi",
-    "default_branch": "master",
-    "web_url": "https://git.jakarta.go.id/miftah/SIMKoperasi"
-  }
-]
-```
-**Request 2 (Live Endpoint Exploitation):**
+**Step 2:** Penyerang mengirimkan HTTP GET *request* anonim langsung ke URL peladen *live* tersebut.
 ```http
 GET /SIKOPJAK/sinkronisasi/berita/trx HTTP/1.1
 Host: disppkukm.jakarta.go.id
-Accept: text/html,application/xhtml+xml
+Accept: text/html
 ```
 
-**Response 2 (Data Leak Snippet):**
+**Step 3:** Server merespons dan berhasil memicu pemanggilan fungsi *debug* `dd()`, yang kemudian menghentikan eksekusi skrip secara prematur dan menampilkan halaman pelacakan kesalahan (*stack trace*).
+![Fungsi Debug](fungsi-debug.png)
+
+## CVSS Score Breakdown
+- **Attack Vector:** Network - Dieksploitasi melalui internet publik.
+- **Attack Complexity:** Low - Cukup mengunjungi URL endpoint.
+- **Privileges Required:** None - Endpoint dapat diakses anonim.
+- **User Interaction:** None - Berjalan mandiri tanpa interaksi admin.
+- **Scope:** Unchanged - Masih berada pada konteks aplikasi yang sama.
+- **Confidentiality:** Low - Memberikan gambaran sekilas status aplikasi dan path internal.
+- **Integrity:** None - Tidak mengubah data permanen.
+- **Availability:** None - Tidak menjatuhkan layanan utama.
+
+## Recommended Fix
+1. Hapus atau komentari semua fungsi *debug* (seperti `dd()`, `var_dump()`, atau `print_r()`) sebelum melakukan perpindahan kode dari lingkungan *staging/development* ke lingkungan produksi.
+
+---
+
+# F-03 — Sensitive Information Exposure Through Debug Interface
+
+- **Title:** Sensitive Information Exposure via Laravel Ignition Debug Interface
+- **CWE:** CWE-215: Information Exposure Through Debug Information
+- **CVSS 3.1 Score:** 7.5 (High)
+
+## Description
+Menyambung pada kerentanan F-02, saat fungsi *debug* terpicu, terungkap kelemahan konfigurasi lain di mana variabel lingkungan diatur secara tidak aman (`APP_DEBUG=true`) pada *server live*. Kondisi ini mengaktifkan antarmuka pelacakan kesalahan *Laravel Ignition* di lingkungan produksi. Ignition secara otomatis membocorkan data *environment* internal secara utuh di halaman web ketika *error* atau fungsi *debug* terpanggil.
+
+## Impact
+Kerentanan ini mengekspos data internal yang bersifat sangat rahasia dan kritikal. Penyerang dapat melihat detail kredensial basis data (seperti `DB_USERNAME`, `DB_PASSWORD`), variabel *session*, struktur kueri SQL internal yang digunakan, serta hierarki *path* direktori di *server*. Jika *database* tersebut memiliki celah keamanan jaringan atau *port* yang terbuka, kredensial ini dapat digunakan untuk mengambil alih basis data secara total, memodifikasi data pemerintah, atau mengekstraksi informasi PII (Personally Identifiable Information).
+
+## POC (Proof of Concept)
+
+**Step 1:** Setelah penyerang mengakses endpoint `/sinkronisasi/berita/trx` (seperti pada F-02) yang memicu *error/debug*, server menayangkan antarmuka Laravel Ignition secara penuh.
+
+**Step 2:** Di dalam halaman antarmuka Laravel Ignition, penyerang menavigasi ke bagian *Environment Variables* dan *SQL Queries*.
+
+**Step 3:** Server secara gamblang membocorkan kredensial basis data (`forge`@`localhost`) serta *raw query* SQL yang berjalan:
 ```http
 HTTP/1.1 500 Internal Server Error
 Content-Type: text/html; charset=UTF-8
 
 SQLSTATE[HY000] [1045] Access denied for user 'forge'@'localhost' (using password: NO) 
 (Connection: mysql2, SQL: select count(*) as aggregate from `berita` where `menu_id` = 11)
-...
 ```
 
-### Screenshots
-![Bukti Akses Publik GitLab](Gitlab-code-source.png)
-
-*Tangkapan layar di atas menunjukkan akses penuh tanpa batas ke repositori `miftah/SIMKoperasi` pada branch `sufi`. Keberadaan tombol "Sign in / Register" di pojok kanan atas membuktikan akses unauthenticated, mengekspos keseluruhan direktori (app, config, storage) ke ranah publik.*
-
-
-
-## Affected Demographic/User Base
-- Seluruh infrastruktur sistem informasi Dinas PPKUKM DKI Jakarta. Eksposur data repositori ini memberikan penyerang keuntungan strategis berupa pemahaman utuh terhadap celah logika aplikasi sebelum serangan lanjutan dilancarkan .
+## CVSS Score Breakdown
+- **Attack Vector:** Network - Diperoleh dengan mengakses aplikasi secara *remote*.
+- **Attack Complexity:** Low - Sangat mudah direproduksi.
+- **Privileges Required:** None - Tidak memerlukan autentikasi login.
+- **User Interaction:** None - Tidak ada interaksi pengguna lain.
+- **Scope:** Unchanged - Terbatas pada aplikasi target.
+- **Confidentiality:** High - Tereksposnya informasi sangat rahasia (kredensial database, struktur SQL, kredensial server).
+- **Integrity:** None - Kerentanan ini hanya bersifat pembacaan (meskipun kredensial bisa digunakan untuk serangan lanjutan, ini adalah penilaian dasar).
+- **Availability:** None.
 
 ## Recommended Fix
-1. **Ubah Visibilitas Repositori (Prioritas Utama):** Segera ubah setelan visibilitas proyek `miftah/SIMKoperasi` di server GitLab dari "Public" menjadi **"Private"** .
-2. **Kunci Akses API Anonim:** Konfigurasikan server GitLab agar menonaktifkan pencantuman daftar proyek publik (*Public Directory*) bagi pengguna yang tidak terautentikasi .
-3. **Audit Keamanan source code:** Lakukan peninjauan menyeluruh terhadap riwayat komit (*commit history*) apabila terdapat kredensial sensitif atau token akses asli yang sempat terunggah sebelumnya.
+1. Ubah variabel `APP_DEBUG=true` menjadi `APP_DEBUG=false` pada file `.env` di lingkungan produksi.
+2. Pastikan `APP_ENV` diubah menjadi `production`.
+
+---
 
 ## References
 - [1] [CWE-538: File and Directory Information Exposure](https://cwe.mitre.org/data/definitions/538.html)
