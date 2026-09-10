@@ -17,11 +17,11 @@ Dari eksposur kode sumber ini, ditemukan bahwa pengembang menggunakan konfiguras
 [cite: 4, 5].
 
 ## Risk Rating
-- **Risk:** **Critical**
+- **Risk:** **Medium**
 - **Difficulty to Exploit:** **Low** [cite: 1]
 - **Authentication Required:** **No** [cite: 1]
 - **User Interaction Required:** **No** [cite: 1]
-- **CVSS 3.1 Score:** [7.5 (High/Critical) - AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N] [cite: 1]
+- **CVSS 4.0 Score:** [5.5 (Medium) - CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:L/VI:L/VA:N/SC:L/SI:L/SA:H/E:P/CR:M/IR:M/AR:M/MAV:N/MAC:L/MAT:N/MPR:N/MUI:N/MVC:L/MVI:L/MVA:L/MSC:L/MSI:L/MSA:L/S:N/AU:Y/V:C/RE:L/U:Green]
 
 ### Impact
 Penyerang eksternal anonim tanpa hak akses apa pun ke sistem dapat mengeksploitasi celah ini untuk mengunduh 100% *source code* aplikasi SIKOPJAK secara utuh [cite: 1, 5]. Tanpa memerlukan kredensial atau *privilege* peladen [cite: 1, 5], pelaku kejahatan dapat melakukan analisis kode statis secara *offline* untuk memetakan celah keamanan tersembunyi [cite: 1] serta membaca pola konfigurasi sensitif yang tercantum pada templat `.env.example` [cite: 1]. 
