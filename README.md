@@ -35,19 +35,30 @@ Lebih jauh lagi, kepemilikan penuh atas pangkalan kode ini berfungsi sebagai pen
 
 1. Penyerang memulai *reconnaissance* pada lingkup target `*.jakarta.go.id` menggunakan perangkat pemindai otomatis seperti **Sublist3r, Amass, dan Subfinder**, yang kemudian berhasil memetakan keberadaan *subdomain* repositori di `git.jakarta.go.id` [cite: 4, 5].
 
+<br>
+
 ![Git](git.jakarta.go.id.png)
 
 2. Saat diakses melalui browser, antarmuka web GitLab mengharuskan pengguna melakukan *login* [cite: 5]. Namun, penyerang memanfaatkan standar arsitektur GitLab dengan menembak *endpoint* API publik bawaan secara anonim (`/api/v4/projects`) [cite: 5].
+
+<br>
 
 ![informasi web](Bukti-nama-WEB.png)
 
 3. Respons JSON dari API membocorkan Project ID 254 dengan nama `SIMKoperasi` [cite: 1, 4, 5]. Penyerang mengakses repositori tersebut tanpa kendala [cite: 1, 5]. Keabsahan bahwa repositori ini adalah kode sumber SIKOPJAK dikonfirmasi melalui teks `web-ppkukm` di dalam `README.md` [cite: 4, 5] serta kecocokan identitas kuki sesi.
 
+<br>
+
 4. Penyerang mengunduh seluruh isi direktori peladen untuk mempelajari struktur kontroler, basis data, dan celah logika aplikasi secara mendalam secara *offline*. 
 
+<br>
+
 **Tahap 2: Pembuktian Data Eksposur di Server Produksi**
+
 6. Berdasarkan hasil tinjauan kode pada berkas `SinkronisasiController.php` baris 18, akses *endpoint* yang tidak terautentikasi di lingkungan produksi:
    `https://disppkukm.jakarta.go.id/SIKOPJAK/sinkronisasi/berita/trx`
+
+<br>
 
 ![Fungsi Debug](fungsi-debug.png)
 
@@ -56,13 +67,19 @@ Lebih jauh lagi, kepemilikan penuh atas pangkalan kode ini berfungsi sebagai pen
 ## Steps to Reproduce/PoC
 
 1. Jalankan proses pengumpulan informasi awal (*reconnaissance*) untuk memetakan domain GitLab instansi menggunakan alat enumerasi seperti Sublist3r atau Subfinder [cite: 4, 5]. 
+
 2. Kirimkan HTTP GET *request* anonim ke API GitLab untuk memintas halaman pelindung *login* [cite: 5]:
    `curl -s "https://git.jakarta.go.id/api/v4/projects?per_page=20"` [cite: 5]
+
 3. Ekstrak informasi dari respons JSON untuk menemukan *Project ID* 254 (`miftah/SIMKoperasi`) [cite: 1, 4, 5].
+
 4. Buka tautan repositori secara langsung pada peramban: 
    `https://git.jakarta.go.id/miftah/SIMKoperasi/tree/sufi` [cite: 5]
+
 5. Amati bahwa antarmuka repositori dapat dijelajahi secara penuh meskipun tombol *Sign in / Register* masih tertera di pojok kanan atas, membuktikan ketiadaan autentikasi [cite: 1, 5].
+
 6. Buka berkas `README.md` untuk memvalidasi teks identifikasi penamaan peladen target (*web-ppkukm*) [cite: 4, 5] dan verifikasi kecocokan kuki sesi aplikasi `simkoperasi`.
+
 7. Buka berkas `.env.example` untuk melihat struktur variabel lingkungan yang terekspos [cite: 1, 4, 5].
 
 ### Relevant Requests & Responses
