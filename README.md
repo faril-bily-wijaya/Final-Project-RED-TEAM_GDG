@@ -1,4 +1,4 @@
-# Penetration Testing Report: Exposure of Source Code & Configuration in SIKOPJAK (CWE-538 / CWE-200)
+# Penetration Testing Report: Exposure of Source Code & Active Debug Code in SIKOPJAK (CWE-538 / CWE-489)
 
 ## Issue Description
 Kerentanan eksposur informasi kritikal berupa kebocoran repositori kode sumber (*Source Code Disclosure*) ditemukan pada infrastruktur Pemerintah Provinsi DKI Jakarta (`*.jakarta.go.id`). Melalui tahap *reconnaissance* yang sistematis menggunakan perangkat enumerasi otomatis seperti **Sublist3r, Amass, dan Subfinder**, berhasil diungkap keberadaan peladen GitLab internal di `git.jakarta.go.id` . Ini mengizinkan penemuan proyek secara anonim (*unauthenticated*) melalui *endpoint* API publiknya . 
@@ -140,6 +140,7 @@ SQLSTATE[HY000] [1045] Access denied for user 'forge'@'localhost' (using passwor
 3. **Audit Keamanan Pangkalan Kode:** Lakukan peninjauan menyeluruh terhadap riwayat komit (*commit history*) apabila terdapat kredensial sensitif atau token akses asli yang sempat terunggah sebelumnya.
 
 ## References
-- [1] [CWE-547: Use of Hard-coded, Security-relevant Configuration Variables](https://cwe.mitre.org/data/definitions/547.html)
-- [2] [CWE-215: Information Exposure Through Environmental Variables](https://cwe.mitre.org/data/definitions/215.html)
-- [3] [GitLab Docs: Public Projects Visibility](https://docs.gitlab.com/ee/public_access/public_access.html) 
+- [1] [CWE-538: File and Directory Information Exposure](https://cwe.mitre.org/data/definitions/538.html)
+- [2] [CWE-489: Active Debug Code](https://cwe.mitre.org/data/definitions/489.html)
+- [3] [CWE-215: Information Exposure Through Debug Information](https://cwe.mitre.org/data/definitions/215.html)
+- [4] [GitLab Docs: Public Projects Visibility](https://docs.gitlab.com/ee/public_access/public_access.html)
