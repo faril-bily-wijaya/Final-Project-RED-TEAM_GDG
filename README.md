@@ -45,6 +45,8 @@ Lebih jauh lagi, kepemilikan penuh atas pangkalan kode ini berfungsi sebagai pen
 
 ![informasi web](Bukti-nama-WEB.png)
 
+![Bukti session cookie](Bukti-session-cookie.png)
+
 3. Respons JSON dari API membocorkan Project ID 254 dengan nama `SIMKoperasi` [cite: 1, 4, 5]. Penyerang mengakses repositori tersebut tanpa kendala [cite: 1, 5]. Keabsahan bahwa repositori ini adalah kode sumber SIKOPJAK dikonfirmasi melalui teks `web-ppkukm` di dalam `README.md` [cite: 4, 5] serta kecocokan identitas kuki sesi.
 
 <br>
