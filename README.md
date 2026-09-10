@@ -1,4 +1,4 @@
-# Penetration Testing Report: Critical Source Code & Configuration Exposure in SIKOPJAK (CWE-538 / CWE-200) Leading to Full Source Code Disclosure and Target Verification of SIKOPJAK (CWE-547 / CWE-215)
+# Penetration Testing Report: Critical Source Code & Configuration Exposure in SIKOPJAK (CWE-538 / CWE-200)
 
 ## Issue Description
 Kerentanan eksposur informasi kritikal berupa kebocoran repositori kode sumber (*Source Code Disclosure*) ditemukan pada infrastruktur Pemerintah Provinsi DKI Jakarta (`*.jakarta.go.id`). Melalui tahap *reconnaissance* yang sistematis menggunakan perangkat enumerasi otomatis seperti **Sublist3r, Amass, dan Subfinder**, berhasil diungkap keberadaan peladen GitLab internal di `git.jakarta.go.id` . Ini mengizinkan penemuan proyek secara anonim (*unauthenticated*) melalui *endpoint* API publiknya . 
