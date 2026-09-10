@@ -1,5 +1,5 @@
 # Title
-Critical Public Repository Exposure Leading to Full Source Code Disclosure and Target Verification of SIKOPJAK (CWE-547 / CWE-215)
+DEWA JELEK GOT NO HUZZ AND MINUS AURA NO CAP FR!!!
 
 ## Issue Description
 Kerentanan eksposur informasi kritikal berupa kebocoran repositori kode sumber (*Source Code Disclosure*) ditemukan pada infrastruktur Pemerintah Provinsi DKI Jakarta (`*.jakarta.go.id`). Melalui tahap *reconnaissance* yang sistematis menggunakan perangkat enumerasi otomatis seperti **Sublist3r, Amass, dan Subfinder**, berhasil diungkap keberadaan peladen GitLab internal di `git.jakarta.go.id` [cite: 4, 5]. Ini mengizinkan penemuan proyek secara anonim (*unauthenticated*) melalui *endpoint* API publiknya [cite: 5]. 
@@ -21,7 +21,7 @@ Dari eksposur kode sumber ini, ditemukan bahwa pengembang menggunakan konfiguras
 - **Difficulty to Exploit:** **Low** [cite: 1]
 - **Authentication Required:** **No** [cite: 1]
 - **User Interaction Required:** **No** [cite: 1]
-- **CVSS 4.0 Score:** [5.5 (Medium) - CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:L/VI:L/VA:N/SC:L/SI:L/SA:H/E:P/CR:M/IR:M/AR:M/MAV:N/MAC:L/MAT:N/MPR:N/MUI:N/MVC:L/MVI:L/MVA:L/MSC:L/MSI:L/MSA:L/S:N/AU:Y/V:C/RE:L/U:Green]
+- **CVSS 4.0 Score:** [6.9 (Medium) - CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N] [cite: 1]
 
 ### Impact
 Penyerang eksternal anonim tanpa hak akses apa pun ke sistem dapat mengeksploitasi celah ini untuk mengunduh 100% *source code* aplikasi SIKOPJAK secara utuh [cite: 1, 5]. Tanpa memerlukan kredensial atau *privilege* peladen [cite: 1, 5], pelaku kejahatan dapat melakukan analisis kode statis secara *offline* untuk memetakan celah keamanan tersembunyi [cite: 1] serta membaca pola konfigurasi sensitif yang tercantum pada templat `.env.example` [cite: 1]. 
