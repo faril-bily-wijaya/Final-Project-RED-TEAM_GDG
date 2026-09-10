@@ -30,18 +30,26 @@ Lebih jauh lagi, kepemilikan penuh atas pangkalan kode ini berfungsi sebagai pen
 
 ### Attack Scenario
 **Tahap 1: Enumerasi dan Eksposur Repositori**
-1. Penyerang memulai *reconnaissance* pada lingkup target `*.jakarta.go.id` menggunakan perangkat pemindai otomatis seperti **Sublist3r, Amass, dan Subfinder**, yang kemudian berhasil memetakan keberadaan *subdomain* repositori di `git.jakarta.go.id` [cite: 4, 5]. ![subfinder](POC_CYBER\reckon-subdomain.png)
+1. Penyerang memulai *reconnaissance* pada lingkup target `*.jakarta.go.id` menggunakan perangkat pemindai otomatis seperti **Sublist3r, Amass, dan Subfinder**, yang kemudian berhasil memetakan keberadaan *subdomain* repositori di `git.jakarta.go.id` [cite: 4, 5].
 
-2. Saat diakses melalui browser, antarmuka web GitLab mengharuskan pengguna melakukan *login* [cite: 5]. Namun, penyerang memanfaatkan standar arsitektur GitLab dengan menembak *endpoint* API publik bawaan secara anonim (`/api/v4/projects`) ![Git](POC_CYBER\git.jakarta.go.id.png) [cite: 5].
+![subfinder](reckon-subdomain.png)
 
-3. Respons JSON dari API membocorkan Project ID 254 dengan nama `SIMKoperasi` [cite: 1, 4, 5]. Penyerang mengakses repositori tersebut tanpa kendala [cite: 1, 5]. Keabsahan bahwa repositori ini adalah kode sumber SIKOPJAK dikonfirmasi melalui teks `web-ppkukm` di dalam `README.md` [cite: 4, 5] serta kecocokan identitas kuki sesi. ![informasi web)](POC_CYBER\Bukti-nama-WEB.png)
+2. Saat diakses melalui browser, antarmuka web GitLab mengharuskan pengguna melakukan *login* [cite: 5]. Namun, penyerang memanfaatkan standar arsitektur GitLab dengan menembak *endpoint* API publik bawaan secara anonim (`/api/v4/projects`) [cite: 5].
+
+![Git](git.jakarta.go.id.png)
+
+3. Respons JSON dari API membocorkan Project ID 254 dengan nama `SIMKoperasi` [cite: 1, 4, 5]. Penyerang mengakses repositori tersebut tanpa kendala [cite: 1, 5]. Keabsahan bahwa repositori ini adalah kode sumber SIKOPJAK dikonfirmasi melalui teks `web-ppkukm` di dalam `README.md` [cite: 4, 5] serta kecocokan identitas kuki sesi.
+
+![informasi web](Bukti-nama-WEB.png)
 
 4. Penyerang mengunduh seluruh isi direktori peladen untuk mempelajari struktur kontroler, basis data, dan celah logika aplikasi secara mendalam secara *offline*. 
 
 **Tahap 2: Pembuktian Data Eksposur di Server Produksi**
 6. Berdasarkan hasil tinjauan kode pada berkas `SinkronisasiController.php` baris 18, akses *endpoint* yang tidak terautentikasi di lingkungan produksi:
    `https://disppkukm.jakarta.go.id/SIKOPJAK/sinkronisasi/berita/trx`
-7. Amati *server* memicu halaman *debug* Laravel Ignition yang secara gamblang membocorkan informasi kredensial peladen internal (lihat `C:\Users\asx01\Downloads\POC_CYBER\fungsi-debug.png`).
+7. Amati *server* memicu halaman *debug* Laravel Ignition yang secara gamblang membocorkan informasi kredensial peladen internal:
+
+![Fungsi Debug](fungsi-debug.png)
 
 ## Steps to Reproduce/PoC
 
@@ -97,7 +105,7 @@ SQLSTATE[HY000] [1045] Access denied for user 'forge'@'localhost' (using passwor
 ```
 
 ### Screenshots
-![Bukti Akses Publik GitLab](POC_CYBER\Gitlab-code-source.png)
+![Bukti Akses Publik GitLab](Gitlab-code-source.png)
 
 *Tangkapan layar di atas menunjukkan akses penuh tanpa batas ke repositori `miftah/SIMKoperasi` pada branch `sufi`. Keberadaan tombol "Sign in / Register" di pojok kanan atas membuktikan akses unauthenticated, mengekspos keseluruhan direktori (app, config, storage) ke ranah publik.*
 
