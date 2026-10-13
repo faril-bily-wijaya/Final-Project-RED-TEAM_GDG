@@ -93,7 +93,7 @@ Baris 24 pada method `berita_trx()` memanggil `dd($source_data)`. Baris ini hany
 ---
 
 ## References
-- [1] [CWE-538: File and Directory Information Exposure](https://cwe.mitre.org/data/definitions/538.html)
+- [1] [CWE-527: File and Directory Information Exposure]((https://cwe.mitre.org/data/definitions/527.html)
 - [2] [CWE-489: Active Debug Code](https://cwe.mitre.org/data/definitions/489.html)
 - [3] [CWE-215: Information Exposure Through Debug Information](https://cwe.mitre.org/data/definitions/215.html)
 - [4] [GitLab Docs: Public Projects Visibility](https://docs.gitlab.com/ee/public_access/public_access.html)
