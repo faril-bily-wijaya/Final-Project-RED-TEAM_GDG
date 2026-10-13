@@ -71,11 +71,13 @@ Aplikasi SIKOPJAK di produksi berjalan dengan `APP_DEBUG=true` dan `APP_ENV=dev`
    ```
    https://disppkukm.jakarta.go.id/SIKOPJAK/sinkronisasi/berita/trx
    ```
+   
 2. Respons berupa HTTP 500 dengan halaman Ignition yang memuat:
    - Exception `Illuminate\Database\QueryException` beserta pesan SQL (`SQLSTATE[HY000] [1045] Access denied for user 'forge'@'localhost'`)
    - Versi PHP 8.3.8 dan Laravel 10.48.29
    - Tab Context dengan `App Debug: true` dan `App Env: dev`
    - Potongan kode `app/Http/Controllers/SinkronisasiController.php` baris 18
+   ![Bukti debug code](fungsi-debug.png)
 
 **Hasil yang diharapkan:** halaman error generik tanpa detail internal.
 
