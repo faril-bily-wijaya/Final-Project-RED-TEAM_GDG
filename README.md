@@ -8,32 +8,26 @@
 | Item | Detail |
 |---|---|
 | Nama | Faril Bily Wijaya |
-| Division | Cyber Security – Red Team |
-| Jenis Assessment | Web Application & Infrastructure Security Assessment |
-| Metodologi | Reconnaissance → Vulnerability Analysis → Safe Exploitation/PoC → Reporting |
 | Target | `git.jakarta.go.id` & `disppkukm.jakarta.go.id` (SIKOPJAK) |
 
 ---
 
-# Executive Summary
-
-Total terdapat **3 finding utama** yang terdeteksi dari eksploitasi berbasis intelijen (*Reconnaissance*) pada lingkungan target:
 
 ## Ringkasan Finding
 
 | ID | Finding | Target | Severity | Status |
 |---|---|---|---|---|
-| F-01 | Public Repository Exposure (Source Code Disclosure) | `git.jakarta.go.id` | **HIGH (7.5)** | Confirmed |
-| F-02 | Active Debug Code Left in Production | `disppkukm.jakarta.go.id` | **MEDIUM (5.3)** | Confirmed |
-| F-03 | Sensitive Information Exposure Through Debug Interface | `disppkukm.jakarta.go.id` | **HIGH (7.5)** | Confirmed |
+| 01 | Public Repository Exposure (Source Code Disclosure) | `git.jakarta.go.id` | **HIGH (5.3)** | 
+| 02 | Mode debug aktif di produksi menampilkan informasi internal  | `disppkukm.jakarta.go.id` | **MEDIUM (5.3)** | 
+
 
 ---
 
-# F-01 — Public Repository Exposure (Source Code Disclosure)
+# 01 — Public Repository Exposure (Source Code Disclosure)
 
 - **Title:** Public Repository Exposure Leading to Full Source Code Disclosure
-- **CWE:** CWE-538: File and Directory Information Exposure
-- **CVSS 3.1 Score:** 7.5 (High)
+- **CWE:** CWE-527: Exposure of Version-Control Repository to an Unauthorized Control Sphere
+- **CVSS 3.1 Score:** 5.3 (Medium) AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
 
 ## Description
 Kerentanan eksposur informasi kritikal berupa kebocoran repositori kode sumber (*Source Code Disclosure*) ditemukan pada infrastruktur Pemerintah Provinsi DKI Jakarta (`*.jakarta.go.id`). Melalui tahap *reconnaissance* yang sistematis menggunakan perangkat enumerasi otomatis seperti **Sublist3r, Amass, dan Subfinder**, berhasil diungkap keberadaan server GitLab internal di `git.jakarta.go.id`. Kesalahan konfigurasi pada visibilitas proyek memungkinkan penemuan proyek SIKOPJAK secara anonim (*unauthenticated*) melalui *endpoint* API publiknya.
@@ -57,103 +51,44 @@ Penyerang eksternal anonim tanpa hak akses apa pun ke sistem dapat mengeksploita
 ![informasi web](Bukti-nama-WEB.png)
 ![Bukti session cookie](Bukti-session-cookie.png)
 
-## CVSS Score Breakdown
-- **Attack Vector:** Network - Serangan dilakukan secara remote lewat internet.
-- **Attack Complexity:** Low - Tidak membutuhkan eksploitasi kompleks; cukup membaca API publik.
-- **Privileges Required:** None - Penyerang tidak perlu login.
-- **User Interaction:** None - Tidak membutuhkan interaksi dari admin/korban.
-- **Scope:** Unchanged - Celah terbatas pada aplikasi GitLab itu sendiri.
-- **Confidentiality:** High - Seluruh kode sumber, rute, dan logika bisnis bocor sepenuhnya.
-- **Integrity:** None - Penyerang tidak dapat mengubah data.
-- **Availability:** None - Tidak ada gangguan layanan.
-
 ## Recommended Fix
 1. **Ubah Visibilitas Repositori (Prioritas Utama):** Segera ubah setelan visibilitas proyek `miftah/SIMKoperasi` di server GitLab dari "Public" menjadi **"Private"**.
 2. **Kunci Akses API Anonim:** Konfigurasikan server GitLab agar menonaktifkan pencantuman daftar proyek publik (*Public Directory*).
 
 ---
 
-# F-02 — Active Debug Code Left in Production
+# 02 — Mode debug aktif di produksi menampilkan informasi internal (disppkukm.jakarta.go.id)
 
 - **Title:** Active Debug Code (`dd()`) Accessible in Production Environment
-- **CWE:** CWE-489: Active Debug Code
-- **CVSS 3.1 Score:** 5.3 (Medium)
+- **CWE:** CWE-489: Active Debug Code, CWE-209
+- **CVSS 3.1 Score:** 5.3 (Medium) `AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N`
 
-## Description
-Dari hasil peninjauan (*code review*) pada source code yang bocor, ditemukan bahwa pengembang meninggalkan fungsi *debug* aktif di dalam *controller* aplikasi. Analisis statis terhadap berkas `SinkronisasiController.php` (baris 18) menunjukkan keberadaan *endpoint* `/sinkronisasi/berita/trx` yang memanggil fungsi *dump and die* (`dd()`). Endpoint ini diekspos di lingkungan produksi (*live*) tanpa perlindungan *middleware* autentikasi.
+## Ringkasan
+Aplikasi SIKOPJAK di produksi berjalan dengan `APP_DEBUG=true` dan `APP_ENV=dev`. Ketika endpoint `/sinkronisasi/berita/trx` menghasilkan exception, halaman debug Laravel Ignition ditampilkan lengkap kepada pengunjung anonim.
 
-## Impact
-Tertinggalnya fungsi *debug* di produksi memberi indikator kuat bagi penyerang bahwa aplikasi tidak melalui proses pembersihan kode (sanitisasi) yang baik sebelum di-*deploy*. Pengeksekusian fungsi ini secara sengaja dapat digunakan oleh penyerang untuk menginterupsi alur program, memaksa server menampilkan *state* internal aplikasi pada saat itu, dan memicu *error* sistem yang dapat dieksploitasi ke tahap Information Disclosure yang lebih fatal.
+## Langkah Reproduksi
+1. Jalankan:
+   ```
+   curl -i https://disppkukm.jakarta.go.id/SIKOPJAK/sinkronisasi/berita/trx
+   ```
+2. Respons berupa HTTP 500 dengan halaman Ignition yang memuat:
+   - Exception `Illuminate\Database\QueryException` beserta pesan SQL (`SQLSTATE[HY000] [1045] Access denied for user 'forge'@'localhost'`)
+   - Versi PHP 8.3.8 dan Laravel 10.48.29
+   - Tab Context dengan `App Debug: true` dan `App Env: dev`
+   - Potongan kode `app/Http/Controllers/SinkronisasiController.php` baris 18
 
-## POC (Proof of Concept)
+**Hasil yang diharapkan:** halaman error generik tanpa detail internal.
 
-**Step 1:** Berdasarkan temuan kode sumber, penyerang memetakan keberadaan *endpoint* yang rentan: `https://disppkukm.jakarta.go.id/SIKOPJAK/sinkronisasi/berita/trx`.
+## Dampak
+Informasi versi framework, nama pengguna basis data, struktur query, dan path internal server membantu penyerang merencanakan serangan lanjutan. Dalam pengujian ini tidak ditemukan bukti bahwa password atau variabel `.env` rahasia ikut terekspos.
 
-**Step 2:** Penyerang mengirimkan HTTP GET *request* anonim langsung ke URL peladen *live* tersebut.
-```http
-GET /SIKOPJAK/sinkronisasi/berita/trx HTTP/1.1
-Host: disppkukm.jakarta.go.id
-Accept: text/html
-```
+## Catatan Teknis
+Baris 24 pada method `berita_trx()` memanggil `dd($source_data)`. Baris ini hanya dicapai jika query berhasil. Pada kasus ini query gagal di baris 18, sehingga halaman error yang tampil berasal dari exception dan debug mode, bukan dari `dd()`.
 
-**Step 3:** Server merespons dan berhasil memicu pemanggilan fungsi *debug* `dd()`, yang kemudian menghentikan eksekusi skrip secara prematur dan menampilkan halaman pelacakan kesalahan (*stack trace*).
-![Fungsi Debug](fungsi-debug.png)
-
-## CVSS Score Breakdown
-- **Attack Vector:** Network - Dieksploitasi melalui internet publik.
-- **Attack Complexity:** Low - Cukup mengunjungi URL endpoint.
-- **Privileges Required:** None - Endpoint dapat diakses anonim.
-- **User Interaction:** None - Berjalan mandiri tanpa interaksi admin.
-- **Scope:** Unchanged - Masih berada pada konteks aplikasi yang sama.
-- **Confidentiality:** Low - Memberikan gambaran sekilas status aplikasi dan path internal.
-- **Integrity:** None - Tidak mengubah data permanen.
-- **Availability:** None - Tidak menjatuhkan layanan utama.
-
-## Recommended Fix
-1. Hapus atau komentari semua fungsi *debug* (seperti `dd()`, `var_dump()`, atau `print_r()`) sebelum melakukan perpindahan kode dari lingkungan *staging/development* ke lingkungan produksi.
-
----
-
-# F-03 — Sensitive Information Exposure Through Debug Interface
-
-- **Title:** Sensitive Information Exposure via Laravel Ignition Debug Interface
-- **CWE:** CWE-215: Information Exposure Through Debug Information
-- **CVSS 3.1 Score:** 7.5 (High)
-
-## Description
-Menyambung pada kerentanan F-02, saat fungsi *debug* terpicu, terungkap kelemahan konfigurasi lain di mana variabel lingkungan diatur secara tidak aman (`APP_DEBUG=true`) pada *server live*. Kondisi ini mengaktifkan antarmuka pelacakan kesalahan *Laravel Ignition* di lingkungan produksi. Ignition secara otomatis membocorkan data *environment* internal secara utuh di halaman web ketika *error* atau fungsi *debug* terpanggil.
-
-## Impact
-Kerentanan ini mengekspos data internal yang bersifat sangat rahasia dan kritikal. Penyerang dapat melihat detail kredensial basis data (seperti `DB_USERNAME`, `DB_PASSWORD`), variabel *session*, struktur kueri SQL internal yang digunakan, serta hierarki *path* direktori di *server*. Jika *database* tersebut memiliki celah keamanan jaringan atau *port* yang terbuka, kredensial ini dapat digunakan untuk mengambil alih basis data secara total, memodifikasi data pemerintah, atau mengekstraksi informasi PII (Personally Identifiable Information).
-
-## POC (Proof of Concept)
-
-**Step 1:** Setelah penyerang mengakses endpoint `/sinkronisasi/berita/trx` (seperti pada F-02) yang memicu *error/debug*, server menayangkan antarmuka Laravel Ignition secara penuh.
-
-**Step 2:** Di dalam halaman antarmuka Laravel Ignition, penyerang menavigasi ke bagian *Environment Variables* dan *SQL Queries*.
-
-**Step 3:** Server secara gamblang membocorkan kredensial basis data (`forge`@`localhost`) serta *raw query* SQL yang berjalan:
-```http
-HTTP/1.1 500 Internal Server Error
-Content-Type: text/html; charset=UTF-8
-
-SQLSTATE[HY000] [1045] Access denied for user 'forge'@'localhost' (using password: NO) 
-(Connection: mysql2, SQL: select count(*) as aggregate from `berita` where `menu_id` = 11)
-```
-
-## CVSS Score Breakdown
-- **Attack Vector:** Network - Diperoleh dengan mengakses aplikasi secara *remote*.
-- **Attack Complexity:** Low - Sangat mudah direproduksi.
-- **Privileges Required:** None - Tidak memerlukan autentikasi login.
-- **User Interaction:** None - Tidak ada interaksi pengguna lain.
-- **Scope:** Unchanged - Terbatas pada aplikasi target.
-- **Confidentiality:** High - Tereksposnya informasi sangat rahasia (kredensial database, struktur SQL, kredensial server).
-- **Integrity:** None - Kerentanan ini hanya bersifat pembacaan (meskipun kredensial bisa digunakan untuk serangan lanjutan, ini adalah penilaian dasar).
-- **Availability:** None.
-
-## Recommended Fix
-1. Ubah variabel `APP_DEBUG=true` menjadi `APP_DEBUG=false` pada file `.env` di lingkungan produksi.
-2. Pastikan `APP_ENV` diubah menjadi `production`.
+## Perbaikan
+1. Set `APP_DEBUG=false` dan `APP_ENV=production`.
+2. Hapus `dd()`, `var_dump()`, dan `print_r()` dari kode sebelum deployment.
+3. Tangani exception database dengan halaman error generik dan pencatatan log internal.
 
 ---
 
