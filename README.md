@@ -17,7 +17,7 @@
 
 | ID | Finding | Target | Severity | Status |
 |---|---|---|---|---|
-| 01 | Public Repository Exposure (Source Code Disclosure) | `git.jakarta.go.id` | **HIGH (5.3)** | 
+| 01 | Public Repository Exposure (Source Code Disclosure) | `git.jakarta.go.id` | **MEDIUM (5.3)** | 
 | 02 | Mode debug aktif di produksi menampilkan informasi internal  | `disppkukm.jakarta.go.id` | **MEDIUM (5.3)** | 
 
 
@@ -67,9 +67,9 @@ Penyerang eksternal anonim tanpa hak akses apa pun ke sistem dapat mengeksploita
 Aplikasi SIKOPJAK di produksi berjalan dengan `APP_DEBUG=true` dan `APP_ENV=dev`. Ketika endpoint `/sinkronisasi/berita/trx` menghasilkan exception, halaman debug Laravel Ignition ditampilkan lengkap kepada pengunjung anonim.
 
 ## Langkah Reproduksi
-1. Jalankan:
+1. Jalankan di web:
    ```
-   curl -i https://disppkukm.jakarta.go.id/SIKOPJAK/sinkronisasi/berita/trx
+   https://disppkukm.jakarta.go.id/SIKOPJAK/sinkronisasi/berita/trx
    ```
 2. Respons berupa HTTP 500 dengan halaman Ignition yang memuat:
    - Exception `Illuminate\Database\QueryException` beserta pesan SQL (`SQLSTATE[HY000] [1045] Access denied for user 'forge'@'localhost'`)
